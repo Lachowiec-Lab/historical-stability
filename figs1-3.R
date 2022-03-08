@@ -7,15 +7,16 @@ library(rcompanion)
 library(nlstools)
 
 ###Read in yield data for each location
-b <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=1)
-hu <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=2)
-k <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=3)
-m <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=4)
-s <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=5)
-ha <-read_excel("/Users/jenniferlachowiec/OneDrive - Montana State University/LachowiecLabScience/projects/DomesticationRobustness/Data and R code/Data/ReleaseVariety.xlsx", sheet=6)
+b <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_bozeman.csv")
+hu <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_huntley.csv")
+k <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_kalispell.csv")
+m <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_moccasin.csv")
+s <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_sidney.csv")
+ha <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_havre.csv")
 
 location_vector <- c("Havre", "Sidney", "Huntley", "Bozeman", "Moccasin", "Kalispell")
 data_list <- list(ha, s, hu, b, m, k)
+
 all <- rbind(b, hu, k, m, s, ha)
 
 #####################################
