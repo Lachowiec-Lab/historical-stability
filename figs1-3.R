@@ -1,3 +1,8 @@
+### Load env ###
+renv::load()
+
+### Packages ###
+
 library(readxl)
 library(raster)
 library(tidyverse)
@@ -6,40 +11,69 @@ library(beanplot)
 library(rcompanion)
 library(nlstools)
 
-###Read in yield data for each location
-b <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_bozeman.csv")
-hu <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_huntley.csv")
-k <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_kalispell.csv")
-m <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_moccasin.csv")
-s <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_sidney.csv")
-ha <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_havre.csv")
+### Read in yield data for each location
+# List files
+lc_yd_files <- list.files("location_yields", full.names = T)
 
-location_vector <- c("Havre", "Sidney", "Huntley", "Bozeman", "Moccasin", "Kalispell")
-data_list <- list(ha, s, hu, b, m, k)
+# Data list 
+data_list <- lapply(lc_yd_files, FUN = function(df){
+  read.csv(df, check.names=FALSE) %>% 
+    mutate(Location=basename(df) %>% 
+             fs::path_ext_remove() %>%
+             gsub("yield_","",.) %>% 
+             str_to_title)
+})
 
-all <- rbind(b, hu, k, m, s, ha)
+names(data_list) <- lc_yd_files %>% 
+  basename() %>%
+  fs::path_ext_remove() %>%
+  gsub("yield_","",.) %>% 
+  str_to_title()
+
+# Bind yield data in one data.frame
+all <- do.call(rbind, c(data_list, make.row.names=FALSE))
+
+#####################################
+########### Functions ###############
+#####################################
+
+avg_yield_byYear <- function(data){
+  data_plot <- data %>%
+  select(`1949`:`2019`) %>% 
+  pivot_longer(cols=everything(), names_to = "Year", values_to = "Yield") %>% 
+  group_by(Year) %>% 
+  summarize(Yield_mean=mean(Yield, na.rm=TRUE)) %>% 
+  mutate(Year=as.numeric(Year))
+}
+
 
 #####################################
 #########Figure 1####################
 #####################################
 
-###Figure 1A
+# Average yield per year
+all_year <- avg_yield_byYear(all) 
+
+### Figure 1A ###
 par(mfrow = c(2,1))
-plot(colMeans(all[3:73], na.rm = T) ~ as.numeric(colnames(all[3:73])), pch = 16, main = "", ylab = "Yield (bu/a)", xlab = "Year")
-out <- lm(colMeans(all[3:73], na.rm = T) ~ as.numeric(colnames(all[3:73])))
+plot(data=all_year, Yield_mean ~ Year,
+     pch = 16, main = "", ylab = "Yield (bu/a)", xlab = "Year")
+out <- lm(data=all_year, Yield_mean ~ Year)
 abline(out)
 mtext(bquote("R"["adj"]^"2" == .(round(summary(out)$adj.r.squared, 2))),
       line = -2, at = 1950, adj = 0, cex = 0.8)
 mtext(bquote("p =" ~ .(formatC(anova(out)$'Pr(>F)'[1], format = "e", digits = 2))),
       line = -3, at = 1950, adj = 0, cex = 0.8)
 
-###Figure 1B
+### Figure 1B ###
+# Data frame - yield increase
 yieldsup <- tibble(
   state_name = rep("Montana", 6), 
   county_name = c("Gallatin County", "Flathead County", "Hill County", "Yellowstone County", "Richland County", "Judith Basin County"), 
   yield_increase = c(0.7543, 1.01, 0.6329, 1.05, 0.3875, 0.4112)
 )
 
+# Yield in Montana counties
 spatial_data <- left_join(get_urbn_map(map = "counties", sf = TRUE),
                           yieldsup,
                           by = "county_name")
@@ -51,7 +85,8 @@ spatial_data %>%
   coord_sf(datum = NA) +
   labs(fill = "bu/ac/yr")
 
-###Figure 1C
+### Figure 1C ###
+### Yield increase by county ###
 par(mfrow = c(2, 3))
 par(mar = c(5,5,2,1))
 par(bty = 'n') 
@@ -59,10 +94,14 @@ par(bty = 'n')
 yaxes_title <- c("Yield (bu/a)", "", "", "Yield (bu/a)", "", "")
 xaxes_title <- c("", "", "", "Year", "Year", "Year")
 
+# Function to plot mean yield by year
 yield_plot <- function(data, location, yaxes_title, xaxes_title) {
-  plot(colMeans(data[3:73], na.rm = T) ~ as.numeric(colnames(data[3:73])), pch = 16, 
+  
+  data_plot <- avg_yield_byYear(data)
+  
+  plot(data=data_plot, Yield_mean ~ Year, pch = 16, 
        main = location, ylab = yaxes_title, xlab = xaxes_title, cex.lab = 1.5, cex.axis = 1.5, cex = 1.2)
-  out <- lm(colMeans(data[3:73], na.rm = T) ~ as.numeric(colnames(data[3:73])))
+  out <- lm(data=data_plot, Yield_mean ~ Year)
   abline(out)
   mtext(bquote("R"["adj"]^"2" == .(round(summary(out)$adj.r.squared, 2))),
         line = -2, at = 1950, adj = 0, cex = 0.8)
@@ -70,8 +109,9 @@ yield_plot <- function(data, location, yaxes_title, xaxes_title) {
         line = -3, at = 1950, adj = 0, cex = 0.8)
 }
 
-for(i in 1:length(location_vector)){
-  yield_plot(data_list[[i]], location_vector[i], yaxes_title[i], xaxes_title[i])
+# Plot for each location
+for(i in 1:length(data_list)){
+  yield_plot(data_list[[i]], names(data_list)[i], yaxes_title[i], xaxes_title[i])
 }
 
 #####################################
@@ -79,16 +119,19 @@ for(i in 1:length(location_vector)){
 #####################################
 
 #Examine residuals of model fitting yield with year
+
 par(mfrow = c(2,3))
 par(mar = c(4,4,4,1))
 
 resid_plot <- function(data, location){
-  datamod <- lm(colMeans(data[3:73], na.rm = T) ~ as.numeric(colnames(data[3:73])))
-  plot(datamod, which = 1, main = location)
+  data_plot <- avg_yield_byYear(data) 
+  datamod <- lm(data=data_plot, Yield_mean ~ Year)
+  # Residuals vs fitted plot
+  plot(datamod, which = 1, main = location, caption="")
 }
 
-for(i in 1:length(location_vector)){
-  resid_plot(data_list[[i]], location_vector[i])
+for(i in 1:length(data_list)){
+  resid_plot(data_list[[i]], names(data_list)[i])
 }
 
 #####################################
@@ -124,29 +167,31 @@ model <- nls(CV ~ quadplat(count, a, b, clx),
 
 summary(model)
 
-#Define the null model
+# Define the null model
 nullfunct <- function(x, m){m}
 
-m.ini <- mean(all$count)
+m.ini <- mean(all$count, na.rm=TRUE)
 
 null <- nls(CV ~ nullfunct(count, m),
            data = all_narm,
            start = list(m = m.ini),
            trace = FALSE,
            nls.control(maxiter = 1000))
+
+### Pseudo r-squared
 nagelkerke(model, null)
 
-###Confidence intervals for parameters
+### Confidence intervals for parameters
 confint2(model,
          level = 0.95)
 
 boot <- nlsBoot(model)
 summary(boot)
 
-##plot quadratic plateau fit
+## plot quadratic plateau fit
 par(mfrow = c(1,1))
 par(mar = c(5,5,3,1))
-plotPredy(data  = all,
+plotPredy(data  = all_narm,
           x     = count,
           y     = CV,
           model = model,
@@ -163,8 +208,8 @@ plot_CV_count <- function(data, location, yaxes_title, xaxes_title) {
   plot(data$CV ~ data$count, ylab = yaxes_title, xlab = xaxes_title, main = location, cex.lab = 1.5, cex.axis = 1.5, cex = 1.3)
 }
 
-for(i in 1:length(location_vector)){
-  plot_CV_count(data_list[[i]], location_vector[i], yaxes_title[i], xaxes_title[i])
+for(i in 1:length(data_list)){
+  plot_CV_count(data_list[[i]], names(data_list)[i], yaxes_title[i], xaxes_title[i])
 }
 
 #####################################
@@ -184,29 +229,17 @@ axis(side = 2, las = 2)
 #Figure 2b
 
 ##CV values for each location of all released varieties
-m10 <- m[m$count > 9,]
-b10 <- b[b$count > 9,]
-s10 <- s[s$count > 9,]
-ha10 <- ha[ha$count > 9,]
-hu10 <- hu[hu$count > 9,]
-k10 <- k[k$count > 9,]
-
-
-bCV <- as.data.frame(b10[,c("Var", "CV")])
-huCV <- as.data.frame(hu10[,c("Var", "CV")])
-kCV <- as.data.frame(k10[,c("Var", "CV")])
-mCV <- as.data.frame(m10[,c("Var", "CV")])
-sCV <- as.data.frame(s10[,c("Var", "CV")])
-haCV <- as.data.frame(ha10[,c("Var", "CV")])
-
-totes <- list(bCV, huCV, kCV, mCV, sCV, haCV) %>% 
-  reduce(full_join, by = "Var")
-names(totes) <- c("Var", "BozemanCV", "HuntleyCV", "KalispellCV", "MoccasinCV", "SidneyCV", "HavreCV")
+countGt9_var_cv <- all %>% 
+  filter(count>9) 
+  
+totes <- countGt9_var_cv %>% 
+  select(Location,Var,CV) %>% 
+  pivot_wider(names_from = Location, values_from = CV, names_glue = "{Location}CV")
 
 oot <- aggregate(Relyear ~ Var, data = all10, FUN= median)
 
 totes4 <- left_join(oot, totes, by = "Var")
-totesLong <- gather(totes4, location, CV, BozemanCV:HavreCV, factor_key=TRUE)
+totesLong <- gather(totes4, location, CV, BozemanCV:SidneyCV, factor_key=TRUE)
 totesLong$Var <- with(totesLong, reorder(Var, Relyear, median))
 
 beanplot(totesLong$CV ~ totesLong$Var, las = 2, xlab = "", ylab = "Yield CV",
@@ -221,22 +254,27 @@ par(mfrow = c(2,3))
 par(mar = c(5,5,3,1))
 yaxes_title <- c("Yield CV", "", "", "Yield CV", "", "")
 xaxes_title <- c("", "", "", "Release year", "Release year", "Release year")
-data_list <- list(ha10, s10, hu10, b10, m10, k10)
 
 plot_CV_year <- function(data, location, yaxes_title, xaxes_title) {
-  plot(data$CV ~ data$Relyear, ylab = yaxes_title, xlab = xaxes_title, main = location, cex.lab = 1.5, cex.axis = 1.2, cex = 1)
-  abline(lm(data$CV ~ data$Relyear))
+  plot(data=data, CV ~ Relyear, ylab = yaxes_title, xlab = xaxes_title,
+       main = location, cex.lab = 1.5, cex.axis = 1.2, cex = 1)
+  abline(lm(data=data, CV ~ Relyear))
   
 }
 
-for(i in 1:length(location_vector)){
-  plot_CV_year(data_list[[i]], location_vector[i], yaxes_title[i], xaxes_title[i])
+for(i in 1:length(unique(countGt9_var_cv$Location))){
+  location <- unique(countGt9_var_cv$Location)[i]
+  data_list <- countGt9_var_cv %>% 
+    filter(Location==location)
+  plot_CV_year(data_list, location, yaxes_title[i], xaxes_title[i])
 }
 
 par(mfrow = c(2,2))
-for(i in 1:length(location_vector)){
-  summary(lm(data_list[[i]]$CV ~ data_list[[i]]$Relyear))
-  plot(lm(data_list[[i]]$CV ~ data_list[[i]]$Relyear))
+for(i in 1:length(unique(countGt9_var_cv$Location))){
+  location <- unique(countGt9_var_cv$Location)[i]
+  data_list <- countGt9_var_cv %>% 
+    filter(Location==location)
+  plot(lm(data=data_list,CV ~ Relyear))
   
 }
 
@@ -246,7 +284,7 @@ par(mfrow = c(1,1))
 par(mar = c(7,5,1,1))
 beanplot(totesLong$CV ~ totesLong$location, las = 2, xlab = "", ylab = "Yield CV",
          col = c("gray", "black", "white", "red"), border = F, beanlinewd = 1, log = "", droplevel = T,
-         names = location_vector)
+         names = gsub("CV","",levels(totesLong$location)))
 
 ##############################################
 #####Supplemental Figure 3 #bootstrapping ####
@@ -295,14 +333,6 @@ mean(r2all[,1]/10)
 mean(r2all[,2])
 mean(r2all[,3])
 
-
-r2b <- bootCV(b[b$count > 4,])
-r2ha <- bootCV(ha[ha$count > 4,])
-r2hu <- bootCV(hu[hu$count > 4,])
-r2s <- bootCV(s[s$count > 4,])
-r2m <- bootCV(m[m$count > 4,])
-r2k <- bootCV(k[k$count > 4,])
-
 plot_ps <- function(data, location) {
   plot(density(data[,3]), xlim = c(0,1), xlab = "p-value", main = location)
   abline(v = 0.05, col = "red")
@@ -311,10 +341,10 @@ plot_ps <- function(data, location) {
 par(mfrow = c(2,3))
 par(mar = c(5.1, 4.1, 4.1, 2.1))
 
-data_list <- list(r2ha, r2s, r2ha, r2b, r2m, r2k)
-
-for(i in 1:length(location_vector)){
-  plot_ps(data_list[[i]], location_vector[i])
+for(i in 1:length(unique(all5$Location))){
+  location <- unique(all5$Location)[i]
+  bCV <- bootCV(all5 %>% filter(Location==location))
+  plot_ps(bCV, location)
 }
 
 

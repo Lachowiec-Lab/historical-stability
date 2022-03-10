@@ -7,21 +7,21 @@ library(RColorBrewer)
 library(ppcor)
 
 ###yields for 10 years planted or more
-b <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_bozeman.csv")
+b <-read.csv("location_yields/yield_bozeman.csv", check.names = F)
 b10 <- b[b$count > 9, ]
-hu <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_huntley.csv")
+hu <-read.csv("location_yields/yield_huntley.csv", check.names = F)
 hu10 <- hu[hu$count > 9, ]
-k <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_kalispell.csv")
+k <-read.csv("location_yields/yield_kalispell.csv", check.names = F)
 k10 <- k[k$count > 9, ]
-m <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_moccasin.csv")
+m <-read.csv("location_yields/yield_moccasin.csv", check.names = F)
 m10 <- m[m$count > 9, ]
-s <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_sidney.csv")
+s <-read.csv("location_yields/yield_sidney.csv", check.names = F)
 s10 <- s[s$count > 9, ]
-ha <-read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_yields/yield_havre.csv")
+ha <-read.csv("location_yields/yield_havre.csv", check.names = F)
 ha10 <- ha[ha$count > 9, ]
 
 ###annual weather data 
-ann <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/annualNOAAallLocations.csv")
+ann <- read.csv("location_weather/annualNOAAallLocations.csv")
 head(ann)
 
 ####merging weather and yields#####
@@ -38,7 +38,7 @@ outs2 <- aggregate(Yield ~ Year + Var + Relyear, data = pshew, FUN = mean )
 outs4 <- aggregate(TMIN ~ Year + Var + Relyear, data = pshew, FUN = mean )
 outs5 <- aggregate(PRCP ~ Year + Var + Relyear, data = pshew, FUN = mean )
 
-outsData <- cbind(outs, outs1[4], outs2[4], outs4[4], outs5[4])
+outsData <- cbind(outs, outs1[4], outs2[4], outs4[4], outs5[4], location)
 outsData$Year <- as.numeric(as.character(outsData$Year))
 
 return(outsData)
@@ -51,15 +51,7 @@ outsBoz1 <- merge_weather_yield(ann, b10, "Bozeman")
 outsMoc1 <- merge_weather_yield(ann, m10, "Moccasin")
 outsKal1 <- merge_weather_yield(ann, k10, "Kalispell")
 
-outsHav1$location <- "Havre"
-outsSid1$location <- "Sidney"
-outsBoz1$location <- "Bozeman"
-outsKal1$location <- "Kalispell"
-outsHun1$location <- "Huntley"
-outsMoc1$location <- "Moccasin"
-
-
-outsall1 <- rbind(outsHav1, outsSid1, outsBoz1, outsKal1, outsHun1, outsMoc1)
+outsall <- rbind(outsHav1, outsSid1, outsBoz1, outsKal1, outsHun1, outsMoc1)
 
 ####################################
 ###########Figure 5#################
