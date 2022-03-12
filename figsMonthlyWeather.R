@@ -1,3 +1,7 @@
+### Load env ###
+renv::load()
+
+### Load packages ###
 library(zoo)
 library(dplyr)
 library(raster)
@@ -15,27 +19,27 @@ month_seq <- as.character(seq.Date(from = dates[1], to = dates[2], by = "month")
 DATE <- data.frame(DATE = substr(month_seq,1,nchar(month_seq)-3))
 
 ##preparing Kalispell data#####
-kaliDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Kalispell_NOAA.csv")
+kaliDraft <- read.csv("location_weather/Kalispell_NOAA.csv")
 head(kaliDraft)
 kaliW <- merge(DATE, kaliDraft, by = "DATE", all.x = TRUE)
 
 ##preparing Sidney data#####
-sidDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Sidney_NOAA.csv")
+sidDraft <- read.csv("location_weather/Sidney_NOAA.csv")
 head(sidDraft)
 sidW <- merge(DATE, sidDraft, by = "DATE", all.x = TRUE)
 
 ##preparing Moccasin data#####
-mocDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Moccasin_NOAA.csv")
+mocDraft <- read.csv("location_weather/Moccasin_NOAA.csv")
 head(mocDraft)
 mocW <- merge(DATE, mocDraft, by = "DATE", all.x = TRUE)
 
 ##preparing Huntley data#####
-hunDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Huntley_NOAA.csv")
+hunDraft <- read.csv("location_weather/Huntley_NOAA.csv")
 head(hunDraft)
 hunW <- merge(DATE, hunDraft, by = "DATE", all.x = TRUE)
 
 ####preparing Havre data########
-havDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Havre_NOAA.csv")
+havDraft <- read.csv("location_weather/Havre_NOAA.csv")
 head(havDraft)
 ##removing station USC00243990 and line 146 because duplicates
 havDraft <- havDraft[!havDraft$STATION == "USC00243990",]
@@ -43,7 +47,7 @@ havW <- havDraft[-146,]
 
 #####Preparing Bozeman data#####
 ###have data from two stations to combine
-bozDraft <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/Bozeman_NOAA.csv")
+bozDraft <- read.csv("location_weather/Bozeman_NOAA.csv")
 temp <- bozDraft[with(bozDraft, order(NAME)),]
 temp2 <- temp[!duplicated(temp$DATE),]
 bozW <- merge(DATE, temp2, by = "DATE", all.x = TRUE)

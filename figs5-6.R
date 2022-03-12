@@ -1,4 +1,7 @@
+### Load env ###
+renv::load()
 
+### Load packages ###
 library(tidyr)
 library(readxl)
 library(factoextra)

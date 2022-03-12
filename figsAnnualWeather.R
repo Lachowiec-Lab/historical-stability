@@ -1,7 +1,11 @@
+### Load env ###
+renv::load()
+
+### Load packages ###
 library(raster)
 
 ###annual weather data at all locations studied
-ann <- read.csv("https://github.com/Lachowiec-Lab/historical-stability/tree/main/location_weather/annualNOAAallLocations.csv")
+ann <- read.csv("location_weather/annualNOAAallLocations.csv")
 locations <- c("Havre", "Sidney", "Huntley", "Bozeman", "Moccasin", "Kalispell")
 summary(ann) ###missing data observed
 

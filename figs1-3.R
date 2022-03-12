@@ -2,7 +2,6 @@
 renv::load()
 
 ### Packages ###
-
 library(readxl)
 library(raster)
 library(tidyverse)
@@ -21,7 +20,8 @@ data_list <- lapply(lc_yd_files, FUN = function(df){
     mutate(Location=basename(df) %>% 
              fs::path_ext_remove() %>%
              gsub("yield_","",.) %>% 
-             str_to_title)
+             str_to_title %>% 
+             factor)
 })
 
 names(data_list) <- lc_yd_files %>% 
@@ -29,6 +29,10 @@ names(data_list) <- lc_yd_files %>%
   fs::path_ext_remove() %>%
   gsub("yield_","",.) %>% 
   str_to_title()
+
+# Order list
+data_list <- data_list[c("Havre","Sidney","Huntley","Bozeman","Moccasin","Kalispell")]
+
 
 # Bind yield data in one data.frame
 all <- do.call(rbind, c(data_list, make.row.names=FALSE))
