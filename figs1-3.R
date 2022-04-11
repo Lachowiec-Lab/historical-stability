@@ -46,7 +46,7 @@ avg_yield_byYear <- function(data){
   select(`1949`:`2019`) %>% 
   pivot_longer(cols=everything(), names_to = "Year", values_to = "Yield") %>% 
   group_by(Year) %>% 
-  summarize(Yield_mean=mean(Yield, na.rm=TRUE)) %>% 
+  summarize(Yield_mean=mean(Yield, na.rm=TRUE)*67.25) %>% ##conversion factor from bu/ac to kg/ha
   mutate(Year=as.numeric(Year))
 }
 
@@ -61,7 +61,7 @@ all_year <- avg_yield_byYear(all)
 ### Figure 1A ###
 par(mfrow = c(2,1))
 plot(data=all_year, Yield_mean ~ Year,
-     pch = 16, main = "", ylab = "Yield (bu/a)", xlab = "Year")
+     pch = 16, main = "", ylab = "Yield (kg/ha)", xlab = "Year")
 out <- lm(data=all_year, Yield_mean ~ Year)
 abline(out)
 mtext(bquote("R"["adj"]^"2" == .(round(summary(out)$adj.r.squared, 2))),
@@ -74,7 +74,7 @@ mtext(bquote("p =" ~ .(formatC(anova(out)$'Pr(>F)'[1], format = "e", digits = 2)
 yieldsup <- tibble(
   state_name = rep("Montana", 6), 
   county_name = c("Gallatin County", "Flathead County", "Hill County", "Yellowstone County", "Richland County", "Judith Basin County"), 
-  yield_increase = c(0.7543, 1.01, 0.6329, 1.05, 0.3875, 0.4112)
+  yield_increase = c(0.7543, 1.01, 0.6329, 1.05, 0.3875, 0.4112)* 67.25 #conversion to kg/ha
 )
 
 # Yield in Montana counties
@@ -87,7 +87,7 @@ spatial_data %>%
   geom_sf(mapping = aes(fill = yield_increase),
           color = "#ffffff", size = 0.05) +
   coord_sf(datum = NA) +
-  labs(fill = "bu/ac/yr")
+  labs(fill = "kg/ha/yr")
 
 ### Figure 1C ###
 ### Yield increase by county ###
@@ -95,7 +95,7 @@ par(mfrow = c(2, 3))
 par(mar = c(5,5,2,1))
 par(bty = 'n') 
 
-yaxes_title <- c("Yield (bu/a)", "", "", "Yield (bu/a)", "", "")
+yaxes_title <- c("Yield (kg/ha)", "", "", "Yield (kg/ha)", "", "")
 xaxes_title <- c("", "", "", "Year", "Year", "Year")
 
 # Function to plot mean yield by year
