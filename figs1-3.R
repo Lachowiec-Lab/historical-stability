@@ -61,10 +61,10 @@ all_year <- avg_yield_byYear(all)
 ### Figure 1A ###
 par(mfrow = c(2,1))
 plot(data=all_year, Yield_mean ~ Year,
-     pch = 16, main = "", ylab = "Yield (kg/ha)", xlab = "Year")
+     pch = 16, main = "", ylab = expression(paste("Yield (kg ha"^-1,")", sep = "")), xlab = "Year")
 out <- lm(data=all_year, Yield_mean ~ Year)
 abline(out)
-mtext(bquote("R"["adj"]^"2" == .(round(summary(out)$adj.r.squared, 2))),
+mtext(bquote("R"^"2" == .(round(summary(out)$r.squared, 2))),
       line = -2, at = 1950, adj = 0, cex = 0.8)
 mtext(bquote("p =" ~ .(formatC(anova(out)$'Pr(>F)'[1], format = "e", digits = 2))),
       line = -3, at = 1950, adj = 0, cex = 0.8)
@@ -107,7 +107,7 @@ yield_plot <- function(data, location, yaxes_title, xaxes_title) {
        main = location, ylab = yaxes_title, xlab = xaxes_title, cex.lab = 1.5, cex.axis = 1.5, cex = 1.2)
   out <- lm(data=data_plot, Yield_mean ~ Year)
   abline(out)
-  mtext(bquote("R"["adj"]^"2" == .(round(summary(out)$adj.r.squared, 2))),
+  mtext(bquote("R"^"2" == .(round(summary(out)$r.squared, 2))),
         line = -2, at = 1950, adj = 0, cex = 0.8)
   mtext(bquote("p =" ~ .(formatC(anova(out)$'Pr(>F)'[1], format = "e", digits = 2))),
         line = -3, at = 1950, adj = 0, cex = 0.8)
@@ -217,25 +217,96 @@ for(i in 1:length(data_list)){
 }
 
 #####################################
-#####Figure 2########################
+#####Supplemental Figure 3###########
 #####################################
+
+par(mar = c(4.1, 4.1, 2.1, 2.1))
+par(mfrow = c(1, 3))
+#relationship between yield CV and mean
+plot(all$Average, all$CV, xlab = expression(paste("Yield (kg ha"^-1,")"), sep = ""),
+     ylab = "Yield CV")
+
+#calculate the log of the mean and variance of the yields
+logvar <- log((all$CV * all$Average)^2, base = 10)
+logavg <- log(all$Average, base = 10)
+
+#relationship between yield log(variance) and log(mean)
+plot(logavg, logvar, xlab = expression(paste("log"[10],"Yield mean"), sep = ""), 
+     ylab = expression(paste("log"[10],"Yield variance"), sep = ""))
+reg <- lm(logvar ~ logavg)
+b <- reg$coefficients[2]
+abline(reg)
+mtext(bquote("b" == .(round(b, 2))),
+      line = -13, at = 3.1, adj = 0, cex = 0.8)
+
+aCVpart1 <- (1/all$Average)
+mflat <- mean(logavg)
+aCVpart2a <- (2-b)*logavg
+aCVpart2b <- (b-2)*mflat
+aCVpart2c <- logvar
+aCVpart2 <- 10^(aCVpart2a + aCVpart2b + aCVpart2c)
+aCV <- aCVpart1 * (aCVpart2^0.5)
+
+#relationship between yield aCV and mean
+plot(all$Average, aCV, xlab = expression(paste("Yield (kg ha"^-1,")"), sep = ""),
+     ylab = "Yield aCV")
+dev.off()
 
 #Based on plateau estimate, only examine varieties grown more than 9 years
 all10 <- all[all$count > 9,]
 
-#Figure 2a
 par(mfrow = c(1, 2))
-par(mar = c(7.1, 4.1, 4.1, 2.1))
-plot(all10$CV ~ all10$Relyear, ylab = "Yield CV", xlab = "Release Year", yaxt = "n")
-abline(lm(all10$CV ~ all10$Relyear))
+par(mar = c(4.1, 4.1, 4.1, 2.1))
+plot(all10$CV ~ all10$Relyear, ylab = "Yield CV", xlab = "Release Year", yaxt = "n",
+     ylim = c(0,0.8))
 axis(side = 2, las = 2)
 
-#Figure 2b
+adjCV <- function(data) {
+  testme <- data.frame(data$Average, data$CV)
+  testme <- testme[complete.cases(testme),]
+  names(testme) <- c("Average", "CV")
+  
+  logvar <- log((testme$CV * testme$Average)^2, base = 10)
+  logavg <- log(testme$Average, base = 10)
+  
+  reg <- lm(logvar ~ logavg)
+  res <- reg$residuals
+  
+  aCVpart1 <- (1/testme$Average)
+  mflat <- mean(logavg)
+  b <- reg$coefficients[2]
+  
+  aCVpart2a <- (2-b)*logavg
+  aCVpart2b <- (b-2)*mflat
+  aCVpart2c <- logvar
+  aCVpart2 <- 10^(aCVpart2a + aCVpart2b + aCVpart2c)
+  
+  aCV <- aCVpart1 * (aCVpart2^0.5)
+  return(aCV)
+}
+
+aCVall10 <- adjCV(all10)
+
+plot(aCVall10 ~ all10$Relyear, ylab = "Yield aCV", xlab = "Release Year", yaxt = "n",
+     ylim = c(0,0.8))
+axis(side = 2, las = 2)
+
+summary(lm(aCVall10 ~ all10$Relyear))
+
+#####################################
+#####Figure 2########################
+#####################################
+
+#Based on plateau estimate, only examine varieties grown more than 9 years
+
+#Figure 2a
 
 ##CV values for each location of all released varieties
 countGt9_var_cv <- all %>% 
   filter(count>9) 
-  
+ 
+###Need to integrate aCV into this code here 
+ 
 totes <- countGt9_var_cv %>% 
   select(Location,Var,CV) %>% 
   pivot_wider(names_from = Location, values_from = CV, names_glue = "{Location}CV")
@@ -249,41 +320,9 @@ totesLong$Var <- with(totesLong, reorder(Var, Relyear, median))
 beanplot(totesLong$CV ~ totesLong$Var, las = 2, xlab = "", ylab = "Yield CV",
          col = c("gray", "black", "white", "red"), border = F, beanlinewd = 1, log = "", droplevel = T)
 
-############################################
-########Figure 3############################
-############################################
-
-#Figure 3a
-par(mfrow = c(2,3))
-par(mar = c(5,5,3,1))
-yaxes_title <- c("Yield CV", "", "", "Yield CV", "", "")
-xaxes_title <- c("", "", "", "Release year", "Release year", "Release year")
-
-plot_CV_year <- function(data, location, yaxes_title, xaxes_title) {
-  plot(data=data, CV ~ Relyear, ylab = yaxes_title, xlab = xaxes_title,
-       main = location, cex.lab = 1.5, cex.axis = 1.2, cex = 1)
-  abline(lm(data=data, CV ~ Relyear))
-  
-}
-
-for(i in 1:length(unique(countGt9_var_cv$Location))){
-  location <- unique(countGt9_var_cv$Location)[i]
-  data_list <- countGt9_var_cv %>% 
-    filter(Location==location)
-  plot_CV_year(data_list, location, yaxes_title[i], xaxes_title[i])
-}
-
-par(mfrow = c(2,2))
-for(i in 1:length(unique(countGt9_var_cv$Location))){
-  location <- unique(countGt9_var_cv$Location)[i]
-  data_list <- countGt9_var_cv %>% 
-    filter(Location==location)
-  plot(lm(data=data_list,CV ~ Relyear))
-  
-}
-
-
-#Figure 3b
+totesLong$location <- factor(totesLong$location, 
+                             levels = c("Havre", "Sidney", "Huntley", "Bozeman", "Moccasin", "Kalispell"))
+#Figure 2b
 par(mfrow = c(1,1))
 par(mar = c(7,5,1,1))
 beanplot(totesLong$CV ~ totesLong$location, las = 2, xlab = "", ylab = "Yield CV",
@@ -291,7 +330,7 @@ beanplot(totesLong$CV ~ totesLong$location, las = 2, xlab = "", ylab = "Yield CV
          names = gsub("CV","",levels(totesLong$location)))
 
 ##############################################
-#####Supplemental Figure 3 #bootstrapping ####
+#####Supplemental Figure 4 #bootstrapping ####
 ##############################################
 
 bootCV <- function(all5) {
@@ -303,21 +342,27 @@ bootCV <- function(all5) {
   for (j in 1:1000){
     #below we make an empty matrix to fill in for the 38 lines with 5 sampled years of data
     rand5 <- matrix(NA, n, 5)
+    print(j)
     for (i in 1:n){
       rand5[i,] <- as.numeric(sample(x = c(all5[i, which(!is.na(all5[i,3:73]))+2]), size = 5, replace = T))
     }
+    print(i)
     rand5 <- as.data.frame(rand5)
-    rand5$CV <- apply(X = rand5[,1:5], MARGIN = 1, cv)
-    rand5$Var <- all5$Var
+    rand5$variance <- apply(X = rand5[,1:5], MARGIN = 1, var)
+    rand5$mean <- apply(X = rand5[,1:5], MARGIN = 1, mean)
+    rand5$Variety <- all5$Var
     rand5$Relyear <- all5$Relyear
+    rand5 <- rand5[!rand5$variance == 0,] #in some cases, the same value was samples, resulting variance =0, so removed
+    temp <- metan::acv(rand5$mean, rand5$variance)
+    rand5$aCV <- temp$acv/100
     head(rand5)
-    meanCV <- aggregate(x = list(rand5$CV, rand5$Relyear), by = list(rand5$Var), FUN = mean)
-    names(meanCV) <- c("Var", "CV", "RelYear")
+    meanAdjCV <- aggregate(x = list(rand5$aCV, rand5$Relyear), by = list(rand5$Variety), FUN = mean)
+    names(meanAdjCV) <- c("Variety", "aCV", "RelYear")
     
-    mod3 <- lm(meanCV$CV ~ meanCV$RelYear)
+    mod3 <- lm(meanAdjCV$aCV ~ meanAdjCV$RelYear)
     
     r2all[j,1] <- mod3$coefficients[2]
-    r2all[j,2] <- summary(mod3)$adj.r.squared
+    r2all[j,2] <- summary(mod3)$r.squared
     r2all[j,3] <- anova(mod3)$'Pr(>F)'[1]
   } 
   return(r2all)
