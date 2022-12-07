@@ -59,10 +59,10 @@ bozW <- merge(DATE, temp2, by = "DATE", all.x = TRUE)
 ####Aggregating monthly values over years to compare across locations
 monthly_means <- function(data) {
   data$MONTH <- substring(data$DATE, first = 6, last = 7)
-  agMean <- aggregate(TAVG ~ MONTH, data = data, FUN = mean, na.rm =T)
-  agMax <- aggregate(TMAX ~ MONTH, data = data, FUN = mean, na.rm =T)
-  agMin <- aggregate(TMIN ~ MONTH, data = data, FUN = mean, na.rm =T)
-  agPre <- aggregate(PRCP ~ MONTH, data = data, FUN = mean, na.rm =T)
+  agMean <- aggregate((TAVG-32)*(5/9) ~ MONTH, data = data, FUN = mean, na.rm =T)
+  agMax <- aggregate((TMAX-32)*(5/9) ~ MONTH, data = data, FUN = mean, na.rm =T)
+  agMin <- aggregate((TMIN-32)*(5/9) ~ MONTH, data = data, FUN = mean, na.rm =T)
+  agPre <- aggregate(PRCP*2.54 ~ MONTH, data = data, FUN = mean, na.rm =T)
   return(list(agMean, agMax, agMin, agPre))
 }
 
@@ -84,14 +84,14 @@ plot_line_aggs <- function(data_list, metric_num, ylim, ylab, xlab) {
 
 data_list <- list(havAggs, sidAggs, hunAggs, bozAggs, mocAggs, kalAggs)
 
-par(bty = 'n')
 par(mfrow = c(2,2))
-par(mar = c(4,5,1,1))
-plot_line_aggs(data_list = data_list, metric_num = 1, ylim = c(10, 71), ylab = "Mean temperature (°F)", xlab = "")
-plot_line_aggs(data_list = data_list, metric_num = 2, ylim = c(10, 91), ylab = "Maximum temperature (°F)", xlab = "")
-legend(x = 5.5, y = 55, cex = .8, legend = c("Havre", "Sidney","Huntley","Bozeman","Moccasin","Kalispell"), fill = c("red", "magenta", "orange","green",  "turquoise", "blue"))
-plot_line_aggs(data_list = data_list, metric_num = 3, ylim = c(-10, 61), ylab = "Minimum temperature (°F)", xlab = "Month")
-plot_line_aggs(data_list = data_list, metric_num = 4, ylim = c(0,3.2), ylab = "Total Precipitation (in)", xlab = "Month")
+par(mar = c(4,6,1,1))
+par(bty = 'n') 
+plot_line_aggs(data_list = data_list, metric_num = 1, ylim = c(-10, 25), ylab = "Mean\n temperature (°C)", xlab = "")
+plot_line_aggs(data_list = data_list, metric_num = 2, ylim = c(-10, 40), ylab = "Maximum\n temperature (°C)", xlab = "")
+legend(x = 5.5, y = 14, cex = 0.8, legend = c("Havre", "Sidney","Huntley","Bozeman","Moccasin","Kalispell"), fill = c("red", "magenta", "orange","green",  "turquoise", "blue"))
+plot_line_aggs(data_list = data_list, metric_num = 3, ylim = c(-20, 15), ylab = "Minimum\n temperature (°C)", xlab = "Month")
+plot_line_aggs(data_list = data_list, metric_num = 4, ylim = c(0,8), ylab = "Total Precipitation (cm)", xlab = "Month")
 
 ####################################################################
 #######Figure 4 a-d month CV over time--location variability########
@@ -133,13 +133,13 @@ par(mfrow = c(2,2))
 par(bty = 'n')
 par(mar = c(5, 6, 1, 1))
 
-plot_line_CVs(data_list = data_list, metric_num = 1, ylim = c(0,0.25), ylab = "CV Mean\ntemperature (°F)", xlab = "")
-plot_line_CVs(data_list = data_list, metric_num = 2, ylim = c(0,0.25), ylab = "CV Maximum\ntemperature (°F)", xlab = "")
+plot_line_CVs(data_list = data_list, metric_num = 1, ylim = c(0,0.25), ylab = "CV Mean\ntemperature", xlab = "")
+plot_line_CVs(data_list = data_list, metric_num = 2, ylim = c(0,0.25), ylab = "CV Maximum\ntemperature", xlab = "")
 legend(x = 5, y = .25, cex = .8, legend = c("Havre", "Sidney","Huntley","Bozeman","Moccasin","Kalispell"), 
        col = c("red", "magenta", "orange","green",  "turquoise", "blue"), lty = c(1,3,4,2,6,5), 
        lwd = c(0.8, 0.8, 0.8, 1.5, 0.8, 0.8))
-plot_line_CVs(data_list = data_list, metric_num = 3, ylim = c(0,0.30), ylab = "CV Minimum\ntemperature (°F)", xlab = "Month")
-plot_line_CVs(data_list = data_list, metric_num = 4, ylim = c(0,1.2), ylab = "CV Total\nPrecipitation (in)", xlab = "Month")
+plot_line_CVs(data_list = data_list, metric_num = 3, ylim = c(0,0.30), ylab = "CV Minimum\ntemperature", xlab = "Month")
+plot_line_CVs(data_list = data_list, metric_num = 4, ylim = c(0,1.2), ylab = "CV Total\nPrecipitation", xlab = "Month")
 
 
 

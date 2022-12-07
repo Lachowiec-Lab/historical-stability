@@ -260,12 +260,12 @@ quadplat <- function(x, a, b, clx) {
          a + b * clx + (-0.5*b/clx) * clx * clx)}
 
 model <- nls(CV ~ quadplat(count, a, b, clx),
-            data = all_narm,
-            start = list(a = a.ini,
-                         b = b.ini,
-                         clx = clx.ini),
-            trace = FALSE,
-            nls.control(maxiter = 4000))
+             data = all_narm,
+             start = list(a = a.ini,
+                          b = b.ini,
+                          clx = clx.ini),
+             trace = FALSE,
+             nls.control(maxiter = 4000))
 
 summary(model)
 
@@ -275,10 +275,10 @@ nullfunct <- function(x, m){m}
 m.ini <- mean(all$count, na.rm=TRUE)
 
 null <- nls(CV ~ nullfunct(count, m),
-           data = all_narm,
-           start = list(m = m.ini),
-           trace = FALSE,
-           nls.control(maxiter = 1000))
+            data = all_narm,
+            start = list(m = m.ini),
+            trace = FALSE,
+            nls.control(maxiter = 1000))
 
 ### Pseudo r-squared
 nagelkerke(model, null)

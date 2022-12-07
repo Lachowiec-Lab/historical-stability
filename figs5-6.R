@@ -27,6 +27,12 @@ ha10 <- ha[ha$count > 9, ]
 ann <- read.csv("location_weather/annualNOAAallLocations.csv")
 head(ann)
 
+#convert to metric: degree Celsius and cm
+ann$TAVG <- (ann$TAVG-32) *(5/9)
+ann$TMAX <- (ann$TMAX-32) *(5/9)
+ann$TMIN <- (ann$TMIN-32) *(5/9)
+ann$PRCP <- ann$PRCP * 2.54
+
 ####merging weather and yields#####
 merge_weather_yield <- function(weather_data, yield_data, location) {
 longData <- gather(yield_data, Year, Yield, `1949`:`2019`, factor_key=TRUE)
@@ -55,6 +61,7 @@ outsMoc1 <- merge_weather_yield(ann, m10, "Moccasin")
 outsKal1 <- merge_weather_yield(ann, k10, "Kalispell")
 
 outsall <- rbind(outsHav1, outsSid1, outsBoz1, outsKal1, outsHun1, outsMoc1)
+outsall$Yield <- outsall$Yield * 67.25 ##converting from bu/ac to kg/ha
 
 ####################################
 ###########Figure 5#################
