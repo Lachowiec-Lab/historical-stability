@@ -9,6 +9,58 @@ library(corrplot)
 library(RColorBrewer)
 library(ppcor)
 
+#####################################
+########### Functions ###############
+#####################################
+
+#### Merging weather and yields #####
+merge_weather_yield <- function(weather_data, yield_data, location) {
+  longData <- gather(yield_data, Year, Yield, `1949`:`2019`, factor_key=TRUE)
+  #remove NA rows
+  longData <- longData[!is.na(longData$Yield),]
+  pshew <- merge(longData, ann[ann$Location == location,], by.x = "Year", by.y = "DATE")  
+  pshew <- pshew %>% drop_na(TAVG, TMAX, TMIN, PRCP) 
+  
+  outs <- aggregate(TAVG ~ Year + Var + Relyear, data = pshew, FUN = mean )
+  outs1 <- aggregate(TMAX ~ Year + Var + Relyear, data = pshew, FUN = mean )
+  outs2 <- aggregate(Yield ~ Year + Var + Relyear, data = pshew, FUN = mean )
+  outs4 <- aggregate(TMIN ~ Year + Var + Relyear, data = pshew, FUN = mean )
+  outs5 <- aggregate(PRCP ~ Year + Var + Relyear, data = pshew, FUN = mean )
+  
+  outsData <- cbind(outs, outs1[4], outs2[4], outs4[4], outs5[4], location)
+  outsData$Year <- as.numeric(as.character(outsData$Year))
+  
+  return(outsData)
+}
+
+aCVresPlot <- function(data1, location) {
+  mod0 <- lm(Yield ~ TAVG * PRCP,
+             data = data1)
+  data1$resid <- mod0$residuals - min(mod0$residuals) # transform so all positive values
+  particResMean <- aggregate(resid ~ Var + Relyear,
+                             data = data1,
+                             FUN = "mean")
+  particResVariance <- aggregate(resid ~ Var + Relyear,
+                                 data = data1, FUN = "var")
+  temp <- metan::acv(particResMean$resid,
+                     particResVariance$resid)
+  particResMean$aCV <- temp$acv
+  resMod <- lm(particResMean$aCV/100 ~ particResMean$Relyear)
+  print(plot(particResMean$aCV/100 ~ particResMean$Relyear,
+             pch = 2, cex.lab = 1.5, cex.axis = 1.5, cex = 1.3, 
+             xlab = "Release year", ylab = bquote("aCV"[res]), 
+             ylim = c(0,0.8), xlim = c(1920, 2020),
+             main = location))
+  mtext(bquote("R"^"2" == .(round(summary(resMod)$r.squared, 2))),
+        line = -10.5, at = 1925, adj = 0, cex = 0.8)
+  mtext(bquote("p =" ~ .(formatC(anova(resMod)$'Pr(>F)'[1], format = "e", digits = 2))),
+        line = -11.5, at = 1925, adj = 0, cex = 0.8)
+}
+
+#####################################
+########### Input Data ###############
+#####################################
+
 ###yields for 10 years planted or more
 b <-read.csv("location_yields/yield_bozeman.csv", check.names = F)
 b10 <- b[b$count > 9, ]
@@ -25,7 +77,6 @@ ha10 <- ha[ha$count > 9, ]
 
 ###annual weather data 
 ann <- read.csv("location_weather/annualNOAAallLocations.csv")
-head(ann)
 
 #convert to metric: degree Celsius and cm
 ann$TAVG <- (ann$TAVG-32) *(5/9)
@@ -33,25 +84,7 @@ ann$TMAX <- (ann$TMAX-32) *(5/9)
 ann$TMIN <- (ann$TMIN-32) *(5/9)
 ann$PRCP <- ann$PRCP * 2.54
 
-####merging weather and yields#####
-merge_weather_yield <- function(weather_data, yield_data, location) {
-longData <- gather(yield_data, Year, Yield, `1949`:`2019`, factor_key=TRUE)
-#remove NA rows
-longData <- longData[!is.na(longData$Yield),]
-pshew <- merge(longData, ann[ann$Location == location,], by.x = "Year", by.y = "DATE")  
-pshew <- pshew %>% drop_na(TAVG, TMAX, TMIN, PRCP) 
 
-outs <- aggregate(TAVG ~ Year + Var + Relyear, data = pshew, FUN = mean )
-outs1 <- aggregate(TMAX ~ Year + Var + Relyear, data = pshew, FUN = mean )
-outs2 <- aggregate(Yield ~ Year + Var + Relyear, data = pshew, FUN = mean )
-outs4 <- aggregate(TMIN ~ Year + Var + Relyear, data = pshew, FUN = mean )
-outs5 <- aggregate(PRCP ~ Year + Var + Relyear, data = pshew, FUN = mean )
-
-outsData <- cbind(outs, outs1[4], outs2[4], outs4[4], outs5[4], location)
-outsData$Year <- as.numeric(as.character(outsData$Year))
-
-return(outsData)
-}
 
 outsHav1 <- merge_weather_yield(ann, ha10, "Havre")
 outsSid1 <- merge_weather_yield(ann, s10, "Sidney")
@@ -67,8 +100,8 @@ outsall$Yield <- outsall$Yield * 67.25 ##converting from bu/ac to kg/ha
 ###########Figure 5#################
 ####################################
 outsMat <- data.matrix(outsall[,c(1,3,4,5,7,8)])
-
 outs <- prcomp(outsMat, scale = T)
+
 #Figure 5a
 fviz_eig(outs, addlabels = TRUE, ylim = c(0, 70))
 var <- get_pca_var(outs)
@@ -82,25 +115,15 @@ fviz_pca_biplot(outs, col.ind=outsall$Yield, invisible="quali", pointsize = 1, l
 ###########Figure 6#################
 ####################################
 
-CVresPlot <- function(data1, location) {
-  mod0 <- lm(Yield ~ TAVG * PRCP, data = data1)
-  data1$resid <- mod0$residuals - min(mod0$residuals) #transform so all positive values
-  particResCV <- aggregate(resid ~ Var + Relyear, data = data1, FUN = cv)
-  resMod <- lm(particResCV$resid/100 ~ particResCV$Relyear)
-  print(plot(particResCV$resid/100 ~ particResCV$Relyear, pch = 2, cex.lab = 1.5, cex.axis = 1.5, cex = 1.3, 
-             xlab = "Release year", ylab = bquote("CV"[res]), 
-             ylim = c(0,0.8), xlim = c(1920, 2020),
-             main = location))
-  mtext(bquote("R"["adj"]^"2" == .(round(summary(resMod)$adj.r.squared, 2))),
-        line = -10.5, at = 1925, adj = 0, cex = 0.8)
-  mtext(bquote("p =" ~ .(formatC(anova(resMod)$'Pr(>F)'[1], format = "e", digits = 2))),
-        line = -11.5, at = 1925, adj = 0, cex = 0.8)
-}
-
 par(mfrow = c(2,3))
-CVresPlot(outsHav1, "Havre")
-CVresPlot(outsSid1, "Sidney")
-CVresPlot(outsHun1, "Huntley")
-CVresPlot(outsBoz1, "Bozeman")
-CVresPlot(outsMoc1 ,"Moccasin")
-CVresPlot(outsKal1, "Kalispell")
+par(mar = c(5, 5, 2, 1))
+aCVresPlot(outsHav1, "Havre")
+aCVresPlot(outsSid1, "Sidney")
+aCVresPlot(outsHun1, "Huntley")
+aCVresPlot(outsBoz1, "Bozeman")
+aCVresPlot(outsMoc1 ,"Moccasin")
+aCVresPlot(outsKal1, "Kalispell")
+
+
+pcor(outsall[,c(6,4,5,7,8,1,3)], method = "pearson")
+plot(outsall$TMIN, outsall$TMAX)
